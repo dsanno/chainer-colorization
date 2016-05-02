@@ -16,18 +16,18 @@ from image_util import ImageUtil
 
 image_util = ImageUtil()
 image_size = 224
-train_image_size = image_size
-## train_image_size = image_size / 2
+## train_image_size = image_size
+train_image_size = image_size / 2
 
 def forward(feature, colorization, x_batch, train=True):
-    x = Variable(x_batch, volatile=not train)
-    return colorization(x, train=train)
-##    x = Variable(x_batch, volatile=True)
-##    f1, f2 = feature(x)
-##    if train:
-##        f1 = Variable(f1.data)
-##        f2 = Variable(f2.data)
-##    return colorization(f1, f2, train=train)
+##    x = Variable(x_batch, volatile=not train)
+##    return colorization(x, train=train)
+    x = Variable(x_batch, volatile=True)
+    f1, f2 = feature(x)
+    if train:
+        f1 = Variable(f1.data)
+        f2 = Variable(f2.data)
+    return colorization(f1, f2, train=train)
 
 def train_one(feature, colorization, optimizer, x_batch, y_batch):
     colorization.zerograds()
@@ -46,18 +46,19 @@ def train_epoch(feature, colorization, optimizer, images, batch_size, gpu_device
         xp = cuda.cupy
     image_len = len(images)
     perm = np.random.permutation(image_len)
-##    x_batch = np.zeros((batch_size, 3, train_image_size, train_image_size), dtype=np.float32)
-    x_batch = np.zeros((batch_size, 1, train_image_size, train_image_size), dtype=np.float32)
-##    y_batch = np.zeros((batch_size, 2, train_image_size, train_image_size), dtype=np.float32)
-    y_batch = np.zeros((batch_size, 2, train_image_size / 2, train_image_size / 2), dtype=np.float32)
+    x_batch = np.zeros((batch_size, 3, train_image_size, train_image_size), dtype=np.float32)
+##    x_batch = np.zeros((batch_size, 1, train_image_size, train_image_size), dtype=np.float32)
+    y_batch = np.zeros((batch_size, 2, train_image_size, train_image_size), dtype=np.float32)
+##    y_batch = np.zeros((batch_size, 2, train_image_size / 2, train_image_size / 2), dtype=np.float32)
     for i in six.moves.range(0, (image_len // batch_size)):
         for j, image_index in enumerate(perm[i * batch_size:(i + 1) * batch_size]):
             with io.BytesIO(images[image_index]) as b:
                 image = np.asarray(image_util.rgb_to_lab(Image.open(b).resize((train_image_size, train_image_size))))
             image_l = image[:,:,:1]
-            image_ab = image[::2,::2,1:]
-##            x_batch[j,:] = np.float32(feature.preprocess(np.repeat(image_l, 3, axis=2), input_type='RGB'))
-            x_batch[j,:] = np.float32(np.rollaxis(image_l, 2)) - 127.5
+            image_ab = image[:,:,1:]
+##            image_ab = image[::2,::2,1:]
+            x_batch[j,:] = np.float32(feature.preprocess(np.repeat(image_l, 3, axis=2), input_type='RGB'))
+##            x_batch[j,:] = np.float32(np.rollaxis(image_l, 2)) - 127.5
             y_batch[j,:] = np.float32(np.rollaxis(image_ab, 2)) / 127.5 - 1
         total_loss += train_one(feature, colorization, optimizer, xp.asarray(x_batch), xp.asarray(y_batch))
         if (i + 1) % 100 == 0:
@@ -76,27 +77,30 @@ def train(feature, colorization, optimizer, train_images, test_images, batch_siz
             else:
                 xp = cuda.cupy
             test_batch_size = 10
-##            x_batch = np.zeros((test_batch_size, 3, train_image_size, train_image_size), dtype=np.float32)
-            x_batch = np.zeros((test_batch_size, 1, train_image_size, train_image_size), dtype=np.float32)
+            x_batch = np.zeros((test_batch_size, 3, train_image_size, train_image_size), dtype=np.float32)
+##            x_batch = np.zeros((test_batch_size, 1, train_image_size, train_image_size), dtype=np.float32)
             ##
-            y_batch = np.zeros((test_batch_size, 2, train_image_size / 2, train_image_size / 2), dtype=np.float32)
-##            image_ls = np.zeros((test_batch_size, train_image_size, train_image_size, 1), dtype=np.uint8)
-            image_ls = np.zeros((test_batch_size, train_image_size / 2, train_image_size / 2, 1), dtype=np.uint8)
+##            y_batch = np.zeros((test_batch_size, 2, train_image_size / 2, train_image_size / 2), dtype=np.float32)
+            y_batch = np.zeros((test_batch_size, 2, train_image_size, train_image_size), dtype=np.float32)
+            image_ls = np.zeros((test_batch_size, train_image_size, train_image_size, 1), dtype=np.uint8)
+##            image_ls = np.zeros((test_batch_size, train_image_size / 2, train_image_size / 2, 1), dtype=np.uint8)
             ##
-##            image_abs = np.zeros((test_batch_size, train_image_size, train_image_size, 2), dtype=np.uint8)
-            image_abs = np.zeros((test_batch_size, train_image_size / 2, train_image_size / 2, 2), dtype=np.uint8)
+            image_abs = np.zeros((test_batch_size, train_image_size, train_image_size, 2), dtype=np.uint8)
+##            image_abs = np.zeros((test_batch_size, train_image_size / 2, train_image_size / 2, 2), dtype=np.uint8)
             for j in six.moves.range(10):
 ##                with io.BytesIO(test_images[j]) as b:
                 with io.BytesIO(train_images[j]) as b:
                     image = np.asarray(image_util.rgb_to_lab(Image.open(b).resize((train_image_size, train_image_size))))
                 image_l = image[:,:,:1]
                 ##
-                image_ab = image[::2,::2,1:]
-                image_ls[j,:] = image_l[::2,::2,:]
+                image_ab = image[:,:,1:]
+##                image_ab = image[::2,::2,1:]
+                image_ls[j,:] = image_l[:,:,:]
                 ##
-                image_abs[j,:] = image[::2,::2,1:]
-##                x_batch[j,:] = np.float32(feature.preprocess(np.repeat(image_l, 3, axis=2), input_type='RGB'))
-                x_batch[j,:] = np.float32(np.rollaxis(image_l, 2)) - 127.5
+##                image_abs[j,:] = image[::2,::2,1:]
+                image_abs[j,:] = image[:,:,1:]
+                x_batch[j,:] = np.float32(feature.preprocess(np.repeat(image_l, 3, axis=2), input_type='RGB'))
+##                x_batch[j,:] = np.float32(np.rollaxis(image_l, 2)) - 127.5
                 ##
                 y_batch[j,:] = np.float32(np.rollaxis(image_ab, 2)) / 127.5 - 1
             y = forward(feature, colorization, xp.asarray(x_batch), train=True)
@@ -115,12 +119,15 @@ def train(feature, colorization, optimizer, train_images, test_images, batch_siz
                     image = np.asarray(image_util.rgb_to_lab(Image.open(b).resize((train_image_size, train_image_size))))
                 image_l = image[:,:,:1]
                 ##
-                image_ab = image[::2,::2,1:]
-                image_ls[j,:] = image_l[::2,::2,:]
+##                image_ab = image[::2,::2,1:]
+##                image_ls[j,:] = image_l[::2,::2,:]
+                image_ab = image[:,:,1:]
+                image_ls[j,:] = image_l[:,:,:]
                 ##
-                image_abs[j,:] = image[::2,::2,1:]
-##                x_batch[j,:] = np.float32(feature.preprocess(np.repeat(image_l, 3, axis=2), input_type='RGB'))
-                x_batch[j,:] = np.float32(np.rollaxis(image_l, 2)) - 127.5
+##                image_abs[j,:] = image[::2,::2,1:]
+                image_abs[j,:] = image[:,:,1:]
+                x_batch[j,:] = np.float32(feature.preprocess(np.repeat(image_l, 3, axis=2), input_type='RGB'))
+##                x_batch[j,:] = np.float32(np.rollaxis(image_l, 2)) - 127.5
                 ##
                 y_batch[j,:] = np.float32(np.rollaxis(image_ab, 2)) / 127.5 - 1
             y = forward(feature, colorization, xp.asarray(x_batch), train=True)
@@ -157,18 +164,18 @@ if __name__ == '__main__':
                         help='learning rate')
     args = parser.parse_args()
 
-    vgg_net = None
-##    vgg_net = net.VGG()
-##    colorization_net = net.Colorization()
-    colorization_net = net.Colorization2()
+##    vgg_net = None
+    vgg_net = net.VGG()
+    colorization_net = net.Colorization()
+##    colorization_net = net.Colorization2()
     colorization_optimizer = optimizers.Adam(alpha=args.lr, beta1=0.9)
 #    colorization_optimizer = optimizers.AdaDelta()
     colorization_optimizer.setup(colorization_net)
 
-##    serializers.load_hdf5(args.model, vgg_net)
+    serializers.load_hdf5(args.model, vgg_net)
     if args.gpu >= 0:
         cuda.get_device(args.gpu).use()
-##        vgg_net.to_gpu()
+        vgg_net.to_gpu()
         colorization_net.to_gpu()
     if args.input != None:
         serializers.load_hdf5(args.input + '.model', colorization_net)
