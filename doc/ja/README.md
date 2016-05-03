@@ -1,11 +1,13 @@
-#
+# Chainer implementation of Colorization
 
-# 論文
+# 参考にした論文
 [ディープネットワークを用いた大域特徴と局所特徴の学習による 白黒写真の自動色付け](http://hi.cs.waseda.ac.jp/~iizuka/projects/colorization/ja/)
 
 # 論文との違い
 
-* Classificationの学習を行っていない
+* 画像の特徴抽出に[VGG 16 layers model](https://gist.github.com/ksimonyan/211839e770f7b538e2d8)を使用。
+* Classificationの学習を行っていない。
+
 
 # 必要な環境
 
@@ -24,7 +26,7 @@
 
 ## VGG 16 layers モデルを Chainer で扱えるように変換
 
-ChainerでCaffe modelを読み込むのに時間がかかるので、Chainerで読み込み安い形式に変換かつ必要のないパラメータを削除します。
+ChainerでCaffe modelを読み込むのに時間がかかるので、Chainerで読み込みやすい形式に変換かつ必要のないパラメータを削除します。
 
 ```
 $ python src/create_chainer_model.py
@@ -53,6 +55,7 @@ $ python src/train.py -g 0 -m vgg16.model -o model/color --out_image_dir image -
 ```
 
 オプション
+
 * -g (--gpu) <GPUデバイス番号>: 任意  
 GPUデバイス番号を指定します。負の値を指定した場合はCPUを使用します(デフォルト: -1)
 * -m (--model) <VGG 16 layers モデルファイルパス>: 任意  
@@ -69,10 +72,11 @@ GPUデバイス番号を指定します。負の値を指定した場合はCPU�
 * --iter <イテレーション数>: 任意  
 イテレーション数を指定します(デフォルト: 100)
 * --batch_size <ミニバッチ数>: 任意  
-ミニバッチ数を指定します(デフォルト: 50)
+ミニバッチ数を指定します(デフォルト: 48)
 * --out_image_dir <画像出力ディレクトリ>: 任意  
 学習途中に学習データを使って変換した画像を出力します  
 指定しない場合は画像の出力を行いません
 
 # ライセンス
+
 MIT

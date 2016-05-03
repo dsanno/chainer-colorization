@@ -129,7 +129,7 @@ if __name__ == '__main__':
                         help='output model file path without extension')
     parser.add_argument('--iter', default=100, type=int,
                         help='number of iteration')
-    parser.add_argument('--batch_size', default=50, type=int,
+    parser.add_argument('--batch_size', default=48, type=int,
                         help='batch size')
     parser.add_argument('--out_image_dir', default=None, type=str,
                         help='output directory to output images')
